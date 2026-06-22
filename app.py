@@ -1,135 +1,41 @@
-import streamlit as st
-import requests
-import zipfile
-import pandas as pd
-import io
-
-st.set_page_config(page_title="Valuation de Acoes BR", layout="wide")
-
-st.title("Analisador de Acoes Brasileiras")
-st.markdown("Baseado em Aswath Damodaran - Dados CVM")
-st.markdown("---")
-
-def carregar_dados_cvm():
-    with st.spinner("Carregando dados da CVM..."):
-        url_fca = "https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/FCA/DADOS/fca_cia_aberta_2026.zip"
-        resposta_fca = requests.get(url_fca, timeout=30)
-        arquivo_zip_fca = zipfile.ZipFile(io.BytesIO(resposta_fca.content))
-        with arquivo_zip_fca.open("fca_cia_aberta_valor_mobiliario_2026.csv") as f:
-            df_valores = pd.read_csv(f, sep=";", encoding="latin-1")
-        
-        url_dfp = "https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2025.zip"
-        resposta_dfp = requests.get(url_dfp, timeout=30)
-        arquivo_zip_dfp = zipfile.ZipFile(io.BytesIO(resposta_dfp.content))
-    
-    return df_valores, arquivo_zip_dfp
-
-def buscar_cnpj_por_ticker(ticker, df_valores):
-    resultado = df_valores[df_valores["Codigo_Negociacao"] == ticker]
-    if len(resultado) == 0:
-        return None, None
-    return resultado["CNPJ_Companhia"].values[0], resultado["Nome_Empresarial"].values[0]
-
 def buscar_dados_financeiros(cnpj, arquivo_zip_dfp):
+    nome_arquivo_bpp = f"dfp_cia_aberta_BPP_con_2025.csv"
+    with arquivo_zip_dfp.open(nome_arquivo_bpp) as f:
+        df_bpp = pd.read_csv(f, sep=";", encoding="latin-1")
+    
+    # Debug: mostra quais CNPJs estão no arquivo
+    cnpjs_unicos = df_bpp["CNPJ_CIA"].unique()
+    st.write(f"DEBUG: Total de CNPJs no arquivo: {len(cnpjs_unicos)}")
+    st.write(f"DEBUG: CNPJ procurado: {cnpj}")
+    st.write(f"DEBUG: CNPJ está no arquivo? {cnpj in cnpjs_unicos}")
+    
+    # Tenta sem formatacao
+    cnpj_limpo = cnpj.replace(".", "").replace("/", "").replace("-", "")
+    st.write(f"DEBUG: CNPJ limpo: {cnpj_limpo}")
+    
+    # Filtra
+    df_bpp_filtrado = df_bpp[df_bpp["CNPJ_CIA"] == cnpj]
+    st.write(f"DEBUG: Linhas encontradas com CNPJ exato: {len(df_bpp_filtrado)}")
+    
+    # Se não encontrou, tenta sem formatação
+    if len(df_bpp_filtrado) == 0:
+        df_bpp_filtrado = df_bpp[df_bpp["CNPJ_CIA"].str.replace(".", "").str.replace("/", "").str.replace("-", "") == cnpj_limpo]
+        st.write(f"DEBUG: Linhas encontradas com CNPJ limpo: {len(df_bpp_filtrado)}")
+    
+    # Mostra os períodos disponíveis
+    if len(df_bpp_filtrado) > 0:
+        periodos = df_bpp_filtrado["ORDEM_EXERC"].unique()
+        st.write(f"DEBUG: Periodos disponiveis: {periodos}")
+        df_bpp_filtrado = df_bpp_filtrado[df_bpp_filtrado["ORDEM_EXERC"] == "ULTIMO"]
+    
     nome_arquivo_bpa = f"dfp_cia_aberta_BPA_con_2025.csv"
     with arquivo_zip_dfp.open(nome_arquivo_bpa) as f:
         df_bpa = pd.read_csv(f, sep=";", encoding="latin-1")
     df_bpa = df_bpa[(df_bpa["CNPJ_CIA"] == cnpj) & (df_bpa["ORDEM_EXERC"] == "ULTIMO")]
-    
-    nome_arquivo_bpp = f"dfp_cia_aberta_BPP_con_2025.csv"
-    with arquivo_zip_dfp.open(nome_arquivo_bpp) as f:
-        df_bpp = pd.read_csv(f, sep=";", encoding="latin-1")
-    df_bpp = df_bpp[(df_bpp["CNPJ_CIA"] == cnpj) & (df_bpp["ORDEM_EXERC"] == "ULTIMO")]
     
     nome_arquivo_dre = f"dfp_cia_aberta_DRE_con_2025.csv"
     with arquivo_zip_dfp.open(nome_arquivo_dre) as f:
         df_dre = pd.read_csv(f, sep=";", encoding="latin-1")
     df_dre = df_dre[(df_dre["CNPJ_CIA"] == cnpj) & (df_dre["ORDEM_EXERC"] == "ULTIMO")]
     
-    return {"bpa": df_bpa, "bpp": df_bpp, "dre": df_dre}
-
-def calcular_roic(dados):
-    df_bpp = dados["bpp"]
-    df_dre = dados["dre"]
-    
-    if len(df_bpp) == 0:
-        return {"erro": "Balanço Patrimonial vazio"}
-    if len(df_dre) == 0:
-        return {"erro": "DRE vazia"}
-    
-    try:
-        divida_curto = float(df_bpp[df_bpp["CD_CONTA"] == "2.01.04"]["VL_CONTA"].values[0])
-        divida_longo = float(df_bpp[df_bpp["CD_CONTA"] == "2.02.01"]["VL_CONTA"].values[0])
-        patrimonio = float(df_bpp[df_bpp["CD_CONTA"] == "2.03"]["VL_CONTA"].values[0])
-        
-        divida_total = divida_curto + divida_longo
-        capital_investido = divida_total + patrimonio
-        
-        ebit = float(df_dre[df_dre["CD_CONTA"] == "3.05"]["VL_CONTA"].values[0])
-        resultado_antes = float(df_dre[df_dre["CD_CONTA"] == "3.07"]["VL_CONTA"].values[0])
-        impostos = float(df_dre[df_dre["CD_CONTA"] == "3.08"]["VL_CONTA"].values[0])
-        
-        aliquota = abs(impostos) / resultado_antes
-        nopat = ebit * (1 - aliquota)
-        roic = nopat / capital_investido
-        
-        return {
-            "divida_total": divida_total, 
-            "patrimonio": patrimonio,
-            "capital_investido": capital_investido, 
-            "aliquota_efetiva": aliquota, 
-            "nopat": nopat, 
-            "roic": roic,
-            "erro": None
-        }
-    except Exception as e:
-        return {"erro": f"Erro nos calculos: {str(e)}"}
-
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    ticker_input = st.text_input("Digite o codigo da acao (ex: WEGE3, PETR4):", "WEGE3").upper()
-
-with col2:
-    analisar_button = st.button("Analisar", use_container_width=True)
-
-st.markdown("---")
-
-if analisar_button:
-    with st.spinner("Carregando..."):
-        try:
-            df_valores, arquivo_zip_dfp = carregar_dados_cvm()
-            st.write(f"✓ Cadastro CVM carregado ({len(df_valores)} empresas)")
-            
-            cnpj, nome_empresa = buscar_cnpj_por_ticker(ticker_input, df_valores)
-            
-            if cnpj is None:
-                st.error(f"Ticker {ticker_input} nao encontrado no cadastro")
-            else:
-                st.write(f"✓ Empresa encontrada: {nome_empresa} (CNPJ: {cnpj})")
-                
-                dados = buscar_dados_financeiros(cnpj, arquivo_zip_dfp)
-                st.write(f"✓ Dados BPA: {len(dados['bpa'])} linhas")
-                st.write(f"✓ Dados BPP: {len(dados['bpp'])} linhas")
-                st.write(f"✓ Dados DRE: {len(dados['dre'])} linhas")
-                
-                resultado = calcular_roic(dados)
-                
-                if resultado.get("erro"):
-                    st.error(f"Erro: {resultado['erro']}")
-                else:
-                    st.success(f"Analise: {nome_empresa}")
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("ROIC", f"{resultado['roic']:.1%}")
-                    with col2:
-                        st.metric("Capital", f"R$ {resultado['capital_investido']/1_000_000:.2f}B")
-                    with col3:
-                        st.metric("NOPAT", f"R$ {resultado['nopat']/1_000:.2f}M")
-        
-        except Exception as e:
-            st.error(f"Erro geral: {str(e)}")
-
-st.markdown("---")
-st.markdown("CVM | Damodaran")
+    return {"bpa": df_bpa, "bpp": df_bpp_filtrado, "dre": df_dre}
