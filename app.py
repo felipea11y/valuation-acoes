@@ -7,7 +7,7 @@ import io
 st.title("Analisador de Acoes")
 
 try:
-    st.write("Carregando...")
+    st.write("Carregando dados...")
     
     url = "https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/FCA/DADOS/fca_cia_aberta_2026.zip"
     resp = requests.get(url, timeout=30)
@@ -23,5 +23,12 @@ try:
     resultado = df[df["Codigo_Negociacao"] == ticker]
     
     if len(resultado) > 0:
-        st.success(f"Encontrado: {resultado['Nome_Empresarial'].values[0]}")
-        st.write(f"CNPJ: {resultado['CNPJ_Companhia'].values[0]}")
+        nome = resultado["Nome_Empresarial"].values[0]
+        cnpj = resultado["CNPJ_Companhia"].values[0]
+        st.success(f"Encontrado: {nome}")
+        st.write(f"CNPJ: {cnpj}")
+    else:
+        st.error("Nao encontrado")
+        
+except Exception as e:
+    st.error(f"Erro: {str(e)}")
