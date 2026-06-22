@@ -1,41 +1,27 @@
-def buscar_dados_financeiros(cnpj, arquivo_zip_dfp):
-    nome_arquivo_bpp = f"dfp_cia_aberta_BPP_con_2025.csv"
-    with arquivo_zip_dfp.open(nome_arquivo_bpp) as f:
-        df_bpp = pd.read_csv(f, sep=";", encoding="latin-1")
+import streamlit as st
+import requests
+import zipfile
+import pandas as pd
+import io
+
+st.title("Analisador de Acoes")
+
+try:
+    st.write("Carregando...")
     
-    # Debug: mostra quais CNPJs estão no arquivo
-    cnpjs_unicos = df_bpp["CNPJ_CIA"].unique()
-    st.write(f"DEBUG: Total de CNPJs no arquivo: {len(cnpjs_unicos)}")
-    st.write(f"DEBUG: CNPJ procurado: {cnpj}")
-    st.write(f"DEBUG: CNPJ está no arquivo? {cnpj in cnpjs_unicos}")
+    url = "https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/FCA/DADOS/fca_cia_aberta_2026.zip"
+    resp = requests.get(url, timeout=30)
+    zf = zipfile.ZipFile(io.BytesIO(resp.content))
     
-    # Tenta sem formatacao
-    cnpj_limpo = cnpj.replace(".", "").replace("/", "").replace("-", "")
-    st.write(f"DEBUG: CNPJ limpo: {cnpj_limpo}")
+    with zf.open("fca_cia_aberta_valor_mobiliario_2026.csv") as f:
+        df = pd.read_csv(f, sep=";", encoding="latin-1")
     
-    # Filtra
-    df_bpp_filtrado = df_bpp[df_bpp["CNPJ_CIA"] == cnpj]
-    st.write(f"DEBUG: Linhas encontradas com CNPJ exato: {len(df_bpp_filtrado)}")
+    st.write(f"OK - {len(df)} empresas carregadas")
     
-    # Se não encontrou, tenta sem formatação
-    if len(df_bpp_filtrado) == 0:
-        df_bpp_filtrado = df_bpp[df_bpp["CNPJ_CIA"].str.replace(".", "").str.replace("/", "").str.replace("-", "") == cnpj_limpo]
-        st.write(f"DEBUG: Linhas encontradas com CNPJ limpo: {len(df_bpp_filtrado)}")
+    ticker = st.text_input("Ticker:", "WEGE3").upper()
     
-    # Mostra os períodos disponíveis
-    if len(df_bpp_filtrado) > 0:
-        periodos = df_bpp_filtrado["ORDEM_EXERC"].unique()
-        st.write(f"DEBUG: Periodos disponiveis: {periodos}")
-        df_bpp_filtrado = df_bpp_filtrado[df_bpp_filtrado["ORDEM_EXERC"] == "ULTIMO"]
+    resultado = df[df["Codigo_Negociacao"] == ticker]
     
-    nome_arquivo_bpa = f"dfp_cia_aberta_BPA_con_2025.csv"
-    with arquivo_zip_dfp.open(nome_arquivo_bpa) as f:
-        df_bpa = pd.read_csv(f, sep=";", encoding="latin-1")
-    df_bpa = df_bpa[(df_bpa["CNPJ_CIA"] == cnpj) & (df_bpa["ORDEM_EXERC"] == "ULTIMO")]
-    
-    nome_arquivo_dre = f"dfp_cia_aberta_DRE_con_2025.csv"
-    with arquivo_zip_dfp.open(nome_arquivo_dre) as f:
-        df_dre = pd.read_csv(f, sep=";", encoding="latin-1")
-    df_dre = df_dre[(df_dre["CNPJ_CIA"] == cnpj) & (df_dre["ORDEM_EXERC"] == "ULTIMO")]
-    
-    return {"bpa": df_bpa, "bpp": df_bpp_filtrado, "dre": df_dre}
+    if len(resultado) > 0:
+        st.success(f"Encontrado: {resultado['Nome_Empresarial'].values[0]}")
+        st.write(f"CNPJ: {resultado['CNPJ_Companhia'].values[0]}")
