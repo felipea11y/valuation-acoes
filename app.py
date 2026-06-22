@@ -52,28 +52,38 @@ def calcular_roic(dados):
     df_bpp = dados["bpp"]
     df_dre = dados["dre"]
     
-    if len(df_bpp) == 0 or len(df_dre) == 0:
-        return None
+    if len(df_bpp) == 0:
+        return {"erro": "Balanço Patrimonial vazio"}
+    if len(df_dre) == 0:
+        return {"erro": "DRE vazia"}
     
     try:
-        divida_curto = df_bpp[df_bpp["CD_CONTA"] == "2.01.04"]["VL_CONTA"].values[0]
-        divida_longo = df_bpp[df_bpp["CD_CONTA"] == "2.02.01"]["VL_CONTA"].values[0]
-        patrimonio = df_bpp[df_bpp["CD_CONTA"] == "2.03"]["VL_CONTA"].values[0]
+        divida_curto = float(df_bpp[df_bpp["CD_CONTA"] == "2.01.04"]["VL_CONTA"].values[0])
+        divida_longo = float(df_bpp[df_bpp["CD_CONTA"] == "2.02.01"]["VL_CONTA"].values[0])
+        patrimonio = float(df_bpp[df_bpp["CD_CONTA"] == "2.03"]["VL_CONTA"].values[0])
         
         divida_total = divida_curto + divida_longo
         capital_investido = divida_total + patrimonio
         
-        ebit = df_dre[df_dre["CD_CONTA"] == "3.05"]["VL_CONTA"].values[0]
-        resultado_antes = df_dre[df_dre["CD_CONTA"] == "3.07"]["VL_CONTA"].values[0]
-        impostos = df_dre[df_dre["CD_CONTA"] == "3.08"]["VL_CONTA"].values[0]
+        ebit = float(df_dre[df_dre["CD_CONTA"] == "3.05"]["VL_CONTA"].values[0])
+        resultado_antes = float(df_dre[df_dre["CD_CONTA"] == "3.07"]["VL_CONTA"].values[0])
+        impostos = float(df_dre[df_dre["CD_CONTA"] == "3.08"]["VL_CONTA"].values[0])
         
         aliquota = abs(impostos) / resultado_antes
         nopat = ebit * (1 - aliquota)
         roic = nopat / capital_investido
         
-        return {"divida_total": divida_total, "capital_investido": capital_investido, "aliquota_efetiva": aliquota, "nopat": nopat, "roic": roic}
-    except:
-        return None
+        return {
+            "divida_total": divida_total, 
+            "patrimonio": patrimonio,
+            "capital_investido": capital_investido, 
+            "aliquota_efetiva": aliquota, 
+            "nopat": nopat, 
+            "roic": roic,
+            "erro": None
+        }
+    except Exception as e:
+        return {"erro": f"Erro nos calculos: {str(e)}"}
 
 col1, col2 = st.columns([2, 1])
 
@@ -87,30 +97,39 @@ st.markdown("---")
 
 if analisar_button:
     with st.spinner("Carregando..."):
-        df_valores, arquivo_zip_dfp = carregar_dados_cvm()
-        cnpj, nome_empresa = buscar_cnpj_por_ticker(ticker_input, df_valores)
-        
-        if cnpj is None:
-            st.error(f"Ticker {ticker_input} nao encontrado")
-        else:
-            dados = buscar_dados_financeiros(cnpj, arquivo_zip_dfp)
-            resultado = calcular_roic(dados)
+        try:
+            df_valores, arquivo_zip_dfp = carregar_dados_cvm()
+            st.write(f"✓ Cadastro CVM carregado ({len(df_valores)} empresas)")
             
-            if resultado is None:
-                st.error("Erro ao calcular")
+            cnpj, nome_empresa = buscar_cnpj_por_ticker(ticker_input, df_valores)
+            
+            if cnpj is None:
+                st.error(f"Ticker {ticker_input} nao encontrado no cadastro")
             else:
-                st.success(f"Analise: {nome_empresa} ({ticker_input})")
+                st.write(f"✓ Empresa encontrada: {nome_empresa} (CNPJ: {cnpj})")
                 
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("ROIC", f"{resultado['roic']:.1%}")
-                with col2:
-                    st.metric("Capital Investido", f"R$ {resultado['capital_investido']/1_000_000:.2f} bi")
-                with col3:
-                    st.metric("NOPAT", f"R$ {resultado['nopat']:,.0f} mil")
+                dados = buscar_dados_financeiros(cnpj, arquivo_zip_dfp)
+                st.write(f"✓ Dados BPA: {len(dados['bpa'])} linhas")
+                st.write(f"✓ Dados BPP: {len(dados['bpp'])} linhas")
+                st.write(f"✓ Dados DRE: {len(dados['dre'])} linhas")
                 
-                st.info(f"Divida Total: R$ {resultado['divida_total']:,.0f} mil")
-                st.info(f"Aliquota Imposto: {resultado['aliquota_efetiva']:.1%}")
+                resultado = calcular_roic(dados)
+                
+                if resultado.get("erro"):
+                    st.error(f"Erro: {resultado['erro']}")
+                else:
+                    st.success(f"Analise: {nome_empresa}")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("ROIC", f"{resultado['roic']:.1%}")
+                    with col2:
+                        st.metric("Capital", f"R$ {resultado['capital_investido']/1_000_000:.2f}B")
+                    with col3:
+                        st.metric("NOPAT", f"R$ {resultado['nopat']/1_000:.2f}M")
+        
+        except Exception as e:
+            st.error(f"Erro geral: {str(e)}")
 
 st.markdown("---")
 st.markdown("CVM | Damodaran")
