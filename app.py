@@ -4,8 +4,8 @@ import zipfile
 import pandas as pd
 import io
 
-st.set_page_config(page_title="Valuation", layout="wide")
-st.title("Analisador de Acoes")
+st.set_page_config(page_title="Valuation de Acoes", layout="wide")
+st.title("Analisador de Acoes Brasileiras")
 
 @st.cache_data
 def carregar_cadastro():
@@ -13,24 +13,26 @@ def carregar_cadastro():
     resp = requests.get(url, timeout=30)
     zf = zipfile.ZipFile(io.BytesIO(resp.content))
     with zf.open("fca_cia_aberta_valor_mobiliario_2026.csv") as f:
-        return pd.read_csv(f, sep=";", encoding="latin-1")
+        df = pd.read_csv(f, sep=";", encoding="latin-1")
+    return df
 
-@st.cache_data
-def carregar_dfp():
-    url = "https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2025.zip"
-    resp = requests.get(url, timeout=30)
-    zf = zipfile.ZipFile(io.BytesIO(resp.content))
+try:
+    with st.spinner("Carregando..."):
+        df_cadastro = carregar_cadastro()
     
-    with zf.open("dfp_cia_aberta_BPP_con_2025.csv") as f:
-        bpp = pd.read_csv(f, sep=";", encoding="latin-1")
-    with zf.open("dfp_cia_aberta_DRE_con_2025.csv") as f:
-        dre = pd.read_csv(f, sep=";", encoding="latin-1")
+    st.success(f"✓ {len(df_cadastro)} empresas carregadas")
     
-    return {"bpp": bpp, "dre": dre}
-
-def calcular_roic(cnpj, dfp):
-    bpp = dfp["bpp"]
-    dre = dfp["dre"]
+    ticker = st.text_input("Ticker (ex: WEGE3, PETR4):", "WEGE3").upper()
     
-    bpp = bpp[(bpp["CNPJ_CIA"] == cnpj) & (bpp["ORDEM_EXERC"] == "ULTIMO")]
-    dre = dre[(dre["CNPJ_CIA"] == cnpj) & (dre["ORDEM_EXERC"] == "ULTIMO")]
+    resultado = df_cadastro[df_cadastro["Codigo_Negociacao"] == ticker]
+    
+    if len(resultado) > 0:
+        nome = resultado["Nome_Empresarial"].values[0]
+        cnpj = resultado["CNPJ_Companhia"].values[0]
+        st.info(f"✓ {nome}")
+        st.write(f"CNPJ: {cnpj}")
+    else:
+        st.error("Ticker nao encontrado")
+        
+except Exception as e:
+    st.error(f"Erro: {str(e)}")
