@@ -166,3 +166,56 @@ def valor_presente_periodo_explicito(
     )
 
     return sum(item["valor_presente"] for item in cronograma)
+
+
+def validar_taxas_crescimento(
+    taxas: Iterable[float],
+    horizonte_anos: int = HORIZONTE_PADRAO_ANOS,
+) -> list[float]:
+    """Valida uma taxa de crescimento explícita para cada ano projetado."""
+    horizonte = validar_horizonte(horizonte_anos)
+    lista_taxas = list(taxas)
+
+    if len(lista_taxas) != horizonte:
+        raise ValueError(
+            f"Esperadas {horizonte} taxas de crescimento, "
+            f"mas foram recebidas {len(lista_taxas)}."
+        )
+
+    for taxa in lista_taxas:
+        if taxa <= -1:
+            raise ValueError(
+                "Cada taxa de crescimento deve ser maior que -100%."
+            )
+
+    return lista_taxas
+
+
+def projetar_receitas(
+    receita_base: float,
+    taxas_crescimento: Iterable[float],
+    horizonte_anos: int = HORIZONTE_PADRAO_ANOS,
+) -> list[dict[str, float | int]]:
+    """Projeta receita ano a ano a partir de premissas explícitas de crescimento."""
+    if receita_base < 0:
+        raise ValueError("A receita base não pode ser negativa.")
+
+    taxas = validar_taxas_crescimento(
+        taxas_crescimento,
+        horizonte_anos,
+    )
+
+    receita = float(receita_base)
+    projecoes: list[dict[str, float | int]] = []
+
+    for ano, taxa in enumerate(taxas, start=1):
+        receita *= 1 + taxa
+        projecoes.append(
+            {
+                "ano": ano,
+                "taxa_crescimento": taxa,
+                "receita": receita,
+            }
+        )
+
+    return projecoes
