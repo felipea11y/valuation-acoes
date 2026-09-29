@@ -11,6 +11,8 @@ from src.valuation import (
     validar_horizonte,
     valor_presente_fcffs,
     valor_presente_fluxo,
+    projetar_receitas,
+    validar_taxas_crescimento,
     valor_presente_periodo_explicito,
 )
 
@@ -107,3 +109,37 @@ def test_valor_presente_periodo_explicito():
     )
 
     assert valor == pytest.approx(200)
+
+
+
+def test_validar_taxas_crescimento_exige_uma_por_ano():
+    with pytest.raises(ValueError):
+        validar_taxas_crescimento([0.10, 0.08], horizonte_anos=5)
+
+
+def test_validar_taxas_crescimento_rejeita_menos_cem_por_cento():
+    with pytest.raises(ValueError):
+        validar_taxas_crescimento([-1.0], horizonte_anos=1)
+
+
+def test_projetar_receitas_com_taxas_explicitas():
+    projecoes = projetar_receitas(
+        receita_base=100,
+        taxas_crescimento=[0.10, 0.05],
+        horizonte_anos=2,
+    )
+
+    assert projecoes[0]["receita"] == pytest.approx(110)
+    assert projecoes[1]["receita"] == pytest.approx(115.5)
+    assert projecoes[0]["taxa_crescimento"] == pytest.approx(0.10)
+    assert projecoes[1]["taxa_crescimento"] == pytest.approx(0.05)
+
+
+def test_projetar_receitas_nao_inventa_crescimento():
+    projecoes = projetar_receitas(
+        receita_base=100,
+        taxas_crescimento=[0.0, 0.0],
+        horizonte_anos=2,
+    )
+
+    assert [item["receita"] for item in projecoes] == pytest.approx([100, 100])
