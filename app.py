@@ -1,38 +1,69 @@
 import streamlit as st
-import requests
-import zipfile
-import pandas as pd
-import io
 
-st.set_page_config(page_title="Valuation de Acoes", layout="wide")
-st.title("Analisador de Acoes Brasileiras")
+from src.cvm_data import buscar_empresa, carregar_fca_mais_recente
 
-@st.cache_data
+
+st.set_page_config(
+    page_title="Valuation de Ações",
+    page_icon="📊",
+    layout="wide",
+)
+
+st.title("Analisador de Ações Brasileiras")
+st.caption(
+    "Protótipo acadêmico para consulta de companhias abertas e evolução "
+    "futura para análise fundamentalista e valuation."
+)
+
+
+@st.cache_data(ttl=86_400)
 def carregar_cadastro():
-    url = "https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/FCA/DADOS/fca_cia_aberta_2026.zip"
-    resp = requests.get(url, timeout=30)
-    zf = zipfile.ZipFile(io.BytesIO(resp.content))
-    with zf.open("fca_cia_aberta_valor_mobiliario_2026.csv") as f:
-        df = pd.read_csv(f, sep=";", encoding="latin-1")
-    return df
+    """Carrega a base mais recente disponível do FCA."""
+    return carregar_fca_mais_recente()
+
 
 try:
-    with st.spinner("Carregando..."):
-        df_cadastro = carregar_cadastro()
-    
-    st.success(f"✓ {len(df_cadastro)} empresas carregadas")
-    
-    ticker = st.text_input("Ticker (ex: WEGE3, PETR4):", "WEGE3").upper()
-    
-    resultado = df_cadastro[df_cadastro["Codigo_Negociacao"] == ticker]
-    
-    if len(resultado) > 0:
-        nome = resultado["Nome_Empresarial"].values[0]
-        cnpj = resultado["CNPJ_Companhia"].values[0]
-        st.info(f"✓ {nome}")
-        st.write(f"CNPJ: {cnpj}")
-    else:
-        st.error("Ticker nao encontrado")
-        
-except Exception as e:
-    st.error(f"Erro: {str(e)}")
+    with st.spinner("Carregando cadastro da CVM..."):
+        df_cadastro, ano_base = carregar_cadastro()
+
+    st.success(
+        f"Cadastro CVM {ano_base} carregado: "
+        f"{len(df_cadastro):,} registros."
+    )
+
+    ticker = st.text_input(
+        "Ticker (ex.: WEGE3, PETR4)",
+        "WEGE3",
+    )
+
+    resultado = buscar_empresa(df_cadastro, ticker)
+
+    if ticker.strip():
+        if not resultado.empty:
+            empresa = resultado.iloc[0]
+
+            st.subheader(str(empresa["Nome_Empresarial"]))
+            st.write(f"**Ticker:** {ticker.strip().upper()}")
+            st.write(f"**CNPJ:** {empresa['CNPJ_Companhia']}")
+
+            if len(resultado) > 1:
+                st.caption(
+                    f"O ticker possui {len(resultado)} registros na tabela consultada; "
+                    "o primeiro foi usado para esta visualização."
+                )
+
+            st.info(
+                "Etapa atual: identificação cadastral. Indicadores financeiros "
+                "e valuation ainda não estão implementados."
+            )
+        else:
+            st.warning("Ticker não encontrado no cadastro consultado da CVM.")
+
+    st.markdown(
+        "Fonte: [Portal de Dados Abertos da CVM]"
+        "(https://dados.cvm.gov.br/dataset/cia_aberta-doc-fca)"
+    )
+
+except Exception as erro:
+    st.error("Não foi possível carregar ou interpretar os dados da CVM.")
+    st.caption(f"Detalhe técnico: {erro}")
