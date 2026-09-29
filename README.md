@@ -57,6 +57,7 @@ A disponibilidade, estrutura e atualização dos arquivos são de responsabilida
 ### 4. Valuation
 - [x] infraestrutura matemática inicial de FCFF/WACC;
 - [x] horizonte explícito padrão de 5 anos, parametrizável;
+- [x] projeção explícita de receita por taxas anuais informadas;
 - [ ] projeção completa de FCFF;
 - [ ] custo de capital com parâmetros de mercado;
 - [ ] valor terminal;
