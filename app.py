@@ -9,7 +9,11 @@ from src.cvm_data import (
     colunas_exibicao_demonstracao,
     filtrar_demonstracao_empresa,
 )
-from src.indicadores import calcular_indicadores_dre
+from src.indicadores import (
+    calcular_indicadores_dre,
+    montar_serie_historica_dre,
+    resumo_crescimento_historico,
+)
 
 
 st.set_page_config(
@@ -175,9 +179,105 @@ try:
                         "da CVM. Nenhum cálculo de valuation é aplicado nesta etapa."
                     )
 
+            st.divider()
+            st.subheader("Série histórica anual")
+            st.caption(
+                "Usa DFPs anuais consolidadas. A consulta é limitada a cinco "
+                "exercícios por vez para evitar downloads excessivos."
+            )
+
+            ultimo_ano_fechado = datetime.now().year - 1
+            h1, h2 = st.columns(2)
+
+            with h1:
+                ano_inicial = st.number_input(
+                    "Ano inicial",
+                    min_value=2011,
+                    max_value=ultimo_ano_fechado,
+                    value=max(2011, ultimo_ano_fechado - 2),
+                    step=1,
+                    key="historico_inicio",
+                )
+
+            with h2:
+                ano_final = st.number_input(
+                    "Ano final",
+                    min_value=2011,
+                    max_value=ultimo_ano_fechado,
+                    value=ultimo_ano_fechado,
+                    step=1,
+                    key="historico_fim",
+                )
+
+            if st.button("Carregar série histórica"):
+                inicio = int(ano_inicial)
+                fim = int(ano_final)
+
+                if fim < inicio:
+                    st.error("O ano final deve ser maior ou igual ao ano inicial.")
+                elif fim - inicio + 1 > 5:
+                    st.error("Selecione no máximo cinco exercícios por consulta.")
+                else:
+                    demonstracoes = {}
+
+                    with st.spinner(
+                        f"Carregando DREs anuais de {inicio} a {fim}..."
+                    ):
+                        for ano_hist in range(inicio, fim + 1):
+                            df_ano = carregar_dados_contabeis("DFP", "DRE", ano_hist)
+                            empresa_ano = filtrar_demonstracao_empresa(df_ano, cnpj)
+
+                            if not empresa_ano.empty:
+                                demonstracoes[ano_hist] = empresa_ano
+
+                    serie = montar_serie_historica_dre(demonstracoes)
+
+                    if serie.empty:
+                        st.warning(
+                            "Não foram encontrados dados anuais para o período selecionado."
+                        )
+                    else:
+                        resumo = resumo_crescimento_historico(serie)
+
+                        c1, c2 = st.columns(2)
+                        c1.metric(
+                            "CAGR da receita",
+                            formatar_percentual(resumo["cagr_receita"]),
+                        )
+                        c2.metric(
+                            "CAGR do lucro líquido",
+                            formatar_percentual(resumo["cagr_lucro"]),
+                        )
+
+                        tabela = serie[
+                            [
+                                "ano",
+                                "receita",
+                                "lucro_liquido",
+                                "margem_operacional",
+                                "margem_liquida",
+                                "crescimento_receita",
+                                "crescimento_lucro",
+                            ]
+                        ].copy()
+
+                        st.dataframe(
+                            tabela,
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+
+                        st.line_chart(
+                            serie.set_index("ano")[["receita", "lucro_liquido"]]
+                        )
+                        st.caption(
+                            "CAGR só é calculado quando os valores inicial e final "
+                            "são positivos. Crescimento histórico não é projeção futura."
+                        )
+
             st.info(
-                "Etapa atual: dados cadastrais, demonstrações financeiras e "
-                "indicadores descritivos da DRE. Valuation ainda não está implementado."
+                "Etapa atual: dados cadastrais, demonstrações financeiras, "
+                "indicadores e séries históricas. Valuation ainda não está implementado."
             )
         else:
             st.warning("Ticker não encontrado no cadastro consultado da CVM.")
