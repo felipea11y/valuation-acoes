@@ -93,10 +93,26 @@ Esse valor é um padrão de interface e modelagem, não uma limitação rígida 
 
 O período explícito é tratado separadamente do valor terminal. Para um horizonte de cinco anos, o modelo espera exatamente cinco FCFFs projetados antes de qualquer cálculo de perpetuidade ou outro valor terminal.
 
+## Projeção de receita
+
+A metodologia inicial de crescimento é **híbrida**:
+
+- histórico e CAGR são exibidos apenas como referência;
+- o crescimento futuro é uma premissa explícita;
+- o usuário informa uma taxa para cada ano do horizonte;
+- nenhuma taxa histórica é copiada automaticamente para o futuro.
+
+A receita projetada segue:
+
+```text
+Receita_t = Receita_(t-1) × (1 + g_t)
+```
+
+onde `g_t` é a taxa de crescimento informada explicitamente para o ano `t`.
+
 ## Decisões ainda pendentes
 
 A projeção completa permanece bloqueada até definição explícita de:
-- metodologia para crescimento futuro;
 - metodologia para margens futuras;
 - reinvestimento e capital de giro;
 - taxa livre de risco;
