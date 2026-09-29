@@ -2,73 +2,118 @@
 
 ## Escopo atual
 
-A versão atual do projeto usa dados do **Formulário Cadastral (FCA)** da Comissão de Valores Mobiliários (CVM) para identificar companhias abertas brasileiras a partir do código de negociação.
+O projeto usa dados públicos da **Comissão de Valores Mobiliários (CVM)** para identificar companhias abertas, ler demonstrações financeiras estruturadas e produzir indicadores históricos descritivos.
 
-Essa etapa é cadastral. Ela **não representa, por si só, uma análise de valor da empresa**.
+O módulo de valuation está sendo construído de forma incremental e metodologicamente explícita.
 
-## Princípios para a evolução do projeto
+## Separação de informações
 
-A futura implementação de valuation deverá separar claramente três tipos de informação:
+O projeto separa três tipos de informação:
 
 1. **Dados observados**  
-   Informações publicadas pelas companhias e pela CVM, como demonstrações financeiras, estrutura de capital e dados cadastrais.
+   Informações publicadas pelas companhias e pela CVM.
 
 2. **Cálculos derivados**  
-   Métricas produzidas a partir dos dados observados, como margens, crescimento, retorno sobre capital, dívida líquida e geração de caixa.
+   Métricas calculadas a partir dos dados observados, como margens, crescimento histórico e, futuramente, reinvestimento e retorno sobre capital.
 
 3. **Premissas de valuation**  
-   Hipóteses necessárias para estimar valor, como crescimento futuro, reinvestimento, custo de capital e valor terminal.
+   Hipóteses necessárias para projetar resultados futuros, como crescimento, margens futuras, custo de capital e valor terminal.
 
-Essa separação reduz o risco de apresentar uma hipótese como se fosse um dado histórico.
+Uma premissa nunca deve ser apresentada como se fosse um dado observado.
 
-## Etapas planejadas
+## Método principal de valuation
 
-### Demonstrações financeiras
+Foi definido como método principal inicial o **FCFF — Free Cash Flow to the Firm**, com desconto pelo **WACC — Weighted Average Cost of Capital**.
 
-As séries contábeis deverão ser obtidas, preferencialmente, de bases públicas da CVM, incluindo:
+O objetivo do FCFF é estimar fluxos disponíveis a todos os provedores de capital da empresa, antes da remuneração específica de credores e acionistas.
 
-- DFP — Demonstrações Financeiras Padronizadas;
-- ITR — Informações Trimestrais.
-
-Os dados deverão ser normalizados antes do cálculo de indicadores.
-
-### Análise operacional e financeira
-
-Antes do valuation, o projeto deverá calcular e exibir métricas que ajudem a entender a empresa, por exemplo:
-
-- evolução da receita;
-- margens;
-- rentabilidade;
-- estrutura de capital;
-- endividamento;
-- geração de caixa;
-- reinvestimento.
-
-### Valuation por fluxo de caixa descontado
-
-A implementação futura poderá seguir a estrutura geral de um DCF:
+A estrutura conceitual adotada é:
 
 ```text
-Valor da firma =
-valor presente dos fluxos de caixa esperados
-+ valor presente do valor terminal
+NOPAT = EBIT × (1 - alíquota de imposto)
+
+FCFF =
+NOPAT
++ Depreciação e amortização
+- CAPEX
+- Variação do capital de giro
 ```
 
-Em uma abordagem por FCFF, o projeto deverá explicitar:
+O valor presente dos FCFFs explícitos é calculado por:
 
-- receita projetada;
-- margem operacional;
-- impostos;
-- reinvestimento;
-- FCFF;
-- custo médio ponderado de capital (WACC);
-- crescimento na perpetuidade ou outra hipótese de valor terminal.
+```text
+VP(FCFF_t) = FCFF_t / (1 + WACC)^t
+```
 
-O valor do patrimônio líquido deverá ser derivado do valor da firma por meio dos ajustes financeiros pertinentes, que precisarão ser documentados quando implementados.
+O WACC é estruturado como:
+
+```text
+WACC =
+(E / (D + E)) × Ke
++ (D / (D + E)) × Kd × (1 - T)
+```
+
+onde:
+
+- `E` = valor de mercado do patrimônio;
+- `D` = valor da dívida;
+- `Ke` = custo do capital próprio;
+- `Kd` = custo da dívida antes de impostos;
+- `T` = alíquota de imposto.
+
+Após estimar o **Enterprise Value**, a ponte inicial para o valor do patrimônio é:
+
+```text
+Equity Value =
+Enterprise Value
++ Caixa e equivalentes
+- Dívida bruta
++ Outros ajustes financeiros explicitamente identificados
+```
+
+Essa fórmula não implica que todos os possíveis ajustes de valuation já estejam implementados. Participações não controladoras, ativos não operacionais, passivos de pensão e outros itens deverão ser avaliados separadamente quando aplicáveis.
+
+## O que já pode ser implementado sem premissas adicionais
+
+A infraestrutura matemática pode incluir:
+
+- cálculo de NOPAT;
+- cálculo de FCFF;
+- cálculo de WACC;
+- desconto de fluxos explícitos;
+- ponte entre Enterprise Value e Equity Value;
+- validações matemáticas;
+- testes automatizados.
+
+## Decisões ainda pendentes
+
+A projeção completa permanece bloqueada até definição explícita de:
+
+- horizonte de projeção;
+- metodologia para crescimento futuro;
+- metodologia para margens futuras;
+- reinvestimento e capital de giro;
+- taxa livre de risco;
+- beta;
+- prêmio de risco de mercado;
+- eventual prêmio de risco-país;
+- custo da dívida;
+- alíquota de imposto usada no valuation;
+- pesos de dívida e patrimônio;
+- metodologia de valor terminal;
+- moeda e consistência nominal/real.
+
+O crescimento histórico observado não será automaticamente usado como crescimento futuro.
+
+## Séries históricas
+
+DFP e ITR são utilizadas para análise histórica. As DFPs anuais são usadas na série histórica de receita, lucro e margens.
+
+CAGR é uma métrica histórica. Ele não representa, por si só, uma projeção.
 
 ## Sensibilidade
 
-Uma estimativa pontual de valor pode transmitir uma precisão que o modelo não possui. Por isso, o roadmap inclui análise de sensibilidade para variáveis relevantes, como:
+Uma estimativa pontual de valor pode transmitir precisão excessiva. O roadmap prevê análise de sensibilidade para variáveis como:
 
 - custo de capital;
 - crescimento de longo prazo;
@@ -77,15 +122,15 @@ Uma estimativa pontual de valor pode transmitir uma precisão que o modelo não 
 
 ## Referência metodológica
 
-A estrutura conceitual inicial do módulo de valuation considera materiais acadêmicos disponibilizados por **Aswath Damodaran**, professor da NYU Stern School of Business:
+A estrutura conceitual inicial considera materiais acadêmicos disponibilizados por **Aswath Damodaran**, professor da NYU Stern School of Business:
 
 - https://pages.stern.nyu.edu/~adamodar/New_Home_Page/valuation/val.htm
 - https://pages.stern.nyu.edu/~adamodar/
 
-O uso dessa referência não significa que o projeto já implemente um modelo específico de Damodaran. Cada fórmula e premissa será documentada conforme for incorporada ao código.
+A referência orienta conceitos gerais. Cada fórmula, fonte de dados e premissa adotada pelo projeto deve permanecer documentada explicitamente.
 
 ## Limitações
 
-O projeto está em desenvolvimento. Enquanto os módulos de demonstrações financeiras e valuation não forem implementados, os resultados exibidos devem ser interpretados apenas como consulta cadastral.
+O projeto ainda não possui um DCF completo nem gera estimativa de valor intrínseco. A infraestrutura de FCFF/WACC não deve ser interpretada como recomendação de investimento.
 
-O projeto tem finalidade educacional e acadêmica e não constitui recomendação de investimento.
+O projeto tem finalidade educacional e acadêmica.

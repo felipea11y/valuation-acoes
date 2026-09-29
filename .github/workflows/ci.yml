@@ -31,7 +31,7 @@ jobs:
           pip install pytest
 
       - name: Validar sintaxe
-        run: python -m py_compile app.py src/cvm_data.py src/indicadores.py
+        run: python -m py_compile app.py src/cvm_data.py src/indicadores.py src/valuation.py
 
       - name: Executar testes
         run: python -m pytest -q
