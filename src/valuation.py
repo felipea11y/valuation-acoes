@@ -97,3 +97,72 @@ def enterprise_para_equity(
         - divida_bruta
         + outros_ajustes
     )
+
+
+HORIZONTE_PADRAO_ANOS = 5
+
+
+def validar_horizonte(horizonte_anos: int) -> int:
+    """Valida e retorna o horizonte explícito do DCF."""
+    if not isinstance(horizonte_anos, int):
+        raise TypeError("O horizonte deve ser informado em anos inteiros.")
+
+    if horizonte_anos <= 0:
+        raise ValueError("O horizonte deve ser maior que zero.")
+
+    return horizonte_anos
+
+
+def validar_fluxos_horizonte(
+    fluxos: Iterable[float],
+    horizonte_anos: int = HORIZONTE_PADRAO_ANOS,
+) -> list[float]:
+    """Valida se há exatamente um FCFF explícito por ano do horizonte."""
+    horizonte = validar_horizonte(horizonte_anos)
+    lista_fluxos = list(fluxos)
+
+    if len(lista_fluxos) != horizonte:
+        raise ValueError(
+            f"Esperados {horizonte} FCFFs para o horizonte explícito, "
+            f"mas foram recebidos {len(lista_fluxos)}."
+        )
+
+    return lista_fluxos
+
+
+def cronograma_fcff_explicito(
+    fluxos: Iterable[float],
+    taxa_desconto: float,
+    horizonte_anos: int = HORIZONTE_PADRAO_ANOS,
+) -> list[dict[str, float | int]]:
+    """Monta o cronograma de FCFFs explícitos e seus valores presentes."""
+    lista_fluxos = validar_fluxos_horizonte(fluxos, horizonte_anos)
+
+    return [
+        {
+            "ano": periodo,
+            "fcff": fluxo,
+            "fator_desconto": 1 / ((1 + taxa_desconto) ** periodo),
+            "valor_presente": valor_presente_fluxo(
+                fluxo,
+                taxa_desconto,
+                periodo,
+            ),
+        }
+        for periodo, fluxo in enumerate(lista_fluxos, start=1)
+    ]
+
+
+def valor_presente_periodo_explicito(
+    fluxos: Iterable[float],
+    taxa_desconto: float,
+    horizonte_anos: int = HORIZONTE_PADRAO_ANOS,
+) -> float:
+    """Calcula o valor presente apenas do período explícito do DCF."""
+    cronograma = cronograma_fcff_explicito(
+        fluxos,
+        taxa_desconto,
+        horizonte_anos,
+    )
+
+    return sum(item["valor_presente"] for item in cronograma)
