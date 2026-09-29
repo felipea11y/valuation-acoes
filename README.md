@@ -14,7 +14,10 @@ O projeto está em desenvolvimento e tem como objetivo evoluir de uma camada de 
 - exibição do nome empresarial e CNPJ;
 - cache da base consultada para reduzir downloads repetidos;
 - interface web simples com Streamlit;
-- tratamento básico de erros de rede e leitura dos dados;\n- carregamento de DRE, balanço patrimonial ativo/passivo a partir de DFP ou ITR;\n- filtro das demonstrações pelo CNPJ identificado a partir do ticker.
+- tratamento básico de erros de rede e leitura dos dados;
+- carregamento de DRE, balanço patrimonial ativo/passivo a partir de DFP ou ITR;
+- filtro das demonstrações pelo CNPJ identificado a partir do ticker;
+- indicadores descritivos da DRE: receita, resultado bruto, resultado operacional, lucro líquido e margens.
 
 ## Fonte dos dados
 
@@ -37,13 +40,14 @@ A disponibilidade, estrutura e atualização dos arquivos são de responsabilida
 - [ ] adicionar informações cadastrais relevantes.
 
 ### 2. Demonstrações financeiras
-- [ ] integrar Demonstrações Financeiras Padronizadas (DFP);
-- [ ] integrar Informações Trimestrais (ITR);
+- [x] integrar Demonstrações Financeiras Padronizadas (DFP);
+- [x] integrar Informações Trimestrais (ITR);
 - [ ] organizar DRE, balanço patrimonial e demonstração de fluxo de caixa;
 - [ ] padronizar séries históricas para análise.
 
 ### 3. Análise fundamentalista
-- [ ] receita, margens e crescimento;
+- [x] receita e margens;
+- [ ] crescimento por série histórica;
 - [ ] dívida e estrutura de capital;
 - [ ] rentabilidade;
 - [ ] geração de caixa;
