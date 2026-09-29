@@ -55,9 +55,10 @@ A disponibilidade, estrutura e atualização dos arquivos são de responsabilida
 - [ ] indicadores por ação.
 
 ### 4. Valuation
-- [ ] fluxo de caixa descontado (DCF);
-- [ ] estimativa de FCFF/FCFE;
-- [ ] custo de capital e WACC;
+- [x] infraestrutura matemática inicial de FCFF/WACC;
+- [x] horizonte explícito padrão de 5 anos, parametrizável;
+- [ ] projeção completa de FCFF;
+- [ ] custo de capital com parâmetros de mercado;
 - [ ] valor terminal;
 - [ ] análise de sensibilidade;
 - [ ] comparação por múltiplos.
@@ -112,10 +113,12 @@ valuation-acoes/
 ├── .gitignore
 ├── src/
 │   ├── cvm_data.py
-│   └── indicadores.py
+│   ├── indicadores.py
+│   └── valuation.py
 ├── tests/
 │   ├── test_cvm_data.py
-│   └── test_indicadores.py
+│   ├── test_indicadores.py
+│   └── test_valuation.py
 └── docs/
     └── METODOLOGIA.md
 ```
