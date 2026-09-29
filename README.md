@@ -17,7 +17,8 @@ O projeto está em desenvolvimento e tem como objetivo evoluir de uma camada de 
 - tratamento básico de erros de rede e leitura dos dados;
 - carregamento de DRE, balanço patrimonial ativo/passivo a partir de DFP ou ITR;
 - filtro das demonstrações pelo CNPJ identificado a partir do ticker;
-- indicadores descritivos da DRE: receita, resultado bruto, resultado operacional, lucro líquido e margens.
+- indicadores descritivos da DRE: receita, resultado bruto, resultado operacional, lucro líquido e margens;
+- séries históricas anuais com crescimento de receita/lucro e CAGR.
 
 ## Fonte dos dados
 
@@ -43,11 +44,11 @@ A disponibilidade, estrutura e atualização dos arquivos são de responsabilida
 - [x] integrar Demonstrações Financeiras Padronizadas (DFP);
 - [x] integrar Informações Trimestrais (ITR);
 - [ ] organizar DRE, balanço patrimonial e demonstração de fluxo de caixa;
-- [ ] padronizar séries históricas para análise.
+- [x] padronizar séries históricas iniciais de DRE para análise.
 
 ### 3. Análise fundamentalista
 - [x] receita e margens;
-- [ ] crescimento por série histórica;
+- [x] crescimento por série histórica;
 - [ ] dívida e estrutura de capital;
 - [ ] rentabilidade;
 - [ ] geração de caixa;
@@ -109,6 +110,12 @@ valuation-acoes/
 ├── requirements.txt
 ├── README.md
 ├── .gitignore
+├── src/
+│   ├── cvm_data.py
+│   └── indicadores.py
+├── tests/
+│   ├── test_cvm_data.py
+│   └── test_indicadores.py
 └── docs/
     └── METODOLOGIA.md
 ```
