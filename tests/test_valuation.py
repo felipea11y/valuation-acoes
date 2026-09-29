@@ -4,9 +4,14 @@ from src.valuation import (
     calcular_fcff,
     calcular_nopat,
     calcular_wacc,
+    HORIZONTE_PADRAO_ANOS,
+    cronograma_fcff_explicito,
     enterprise_para_equity,
+    validar_fluxos_horizonte,
+    validar_horizonte,
     valor_presente_fcffs,
     valor_presente_fluxo,
+    valor_presente_periodo_explicito,
 )
 
 
@@ -61,3 +66,44 @@ def test_enterprise_para_equity():
         caixa_e_equivalentes=150,
         divida_bruta=300,
     ) == pytest.approx(850)
+
+
+
+def test_horizonte_padrao_e_cinco_anos():
+    assert HORIZONTE_PADRAO_ANOS == 5
+
+
+def test_validar_horizonte():
+    assert validar_horizonte(5) == 5
+
+
+def test_validar_horizonte_rejeita_zero():
+    with pytest.raises(ValueError):
+        validar_horizonte(0)
+
+
+def test_validar_fluxos_horizonte_exige_um_fluxo_por_ano():
+    with pytest.raises(ValueError):
+        validar_fluxos_horizonte([100, 110], horizonte_anos=5)
+
+
+def test_cronograma_fcff_explicito():
+    cronograma = cronograma_fcff_explicito(
+        [110, 121],
+        taxa_desconto=0.10,
+        horizonte_anos=2,
+    )
+
+    assert [item["ano"] for item in cronograma] == [1, 2]
+    assert cronograma[0]["valor_presente"] == pytest.approx(100)
+    assert cronograma[1]["valor_presente"] == pytest.approx(100)
+
+
+def test_valor_presente_periodo_explicito():
+    valor = valor_presente_periodo_explicito(
+        [110, 121],
+        taxa_desconto=0.10,
+        horizonte_anos=2,
+    )
+
+    assert valor == pytest.approx(200)

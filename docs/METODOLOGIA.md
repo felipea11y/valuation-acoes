@@ -85,11 +85,17 @@ A infraestrutura matemática pode incluir:
 - validações matemáticas;
 - testes automatizados.
 
+## Horizonte explícito
+
+O horizonte padrão inicial do período explícito foi definido em **5 anos**.
+
+Esse valor é um padrão de interface e modelagem, não uma limitação rígida do motor. A implementação deve aceitar outros horizontes positivos quando houver justificativa metodológica.
+
+O período explícito é tratado separadamente do valor terminal. Para um horizonte de cinco anos, o modelo espera exatamente cinco FCFFs projetados antes de qualquer cálculo de perpetuidade ou outro valor terminal.
+
 ## Decisões ainda pendentes
 
 A projeção completa permanece bloqueada até definição explícita de:
-
-- horizonte de projeção;
 - metodologia para crescimento futuro;
 - metodologia para margens futuras;
 - reinvestimento e capital de giro;
