@@ -4,7 +4,7 @@ Aplicação em **Python + Streamlit** para consulta de companhias abertas brasil
 
 O projeto está em desenvolvimento e tem como objetivo evoluir de uma camada de identificação cadastral para uma ferramenta acadêmica de **análise fundamentalista e valuation**.
 
-> **Status atual:** protótipo funcional para identificação de companhias pelo ticker.  
+> **Status atual:** protótipo funcional para identificação de companhias pelo ticker e leitura inicial de DFP/ITR.  
 > **Ainda não implementado:** cálculo de valor intrínseco, fluxo de caixa descontado, múltiplos ou recomendação de investimento.
 
 ## O que já funciona
@@ -14,7 +14,7 @@ O projeto está em desenvolvimento e tem como objetivo evoluir de uma camada de 
 - exibição do nome empresarial e CNPJ;
 - cache da base consultada para reduzir downloads repetidos;
 - interface web simples com Streamlit;
-- tratamento básico de erros de rede e leitura dos dados.
+- tratamento básico de erros de rede e leitura dos dados;\n- carregamento de DRE, balanço patrimonial ativo/passivo a partir de DFP ou ITR;\n- filtro das demonstrações pelo CNPJ identificado a partir do ticker.
 
 ## Fonte dos dados
 
